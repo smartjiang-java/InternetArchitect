@@ -82,9 +82,9 @@ export PATH=$PATH:$M2_HOME/bin
 **配置java环境变量**
 
 ```
-export JAVA_HOME="/usr/java/jdk1.8.0_181-amd64"
-export CLASS_PATH="$JAVA_HOME/lib"
-export PATH=".$PATH:$JAVA_HOME/bin"
+export JAVA_HOME=/usr/local/jdk1.8.0_11
+export CLASSPATH=.:$JAVA_HOME/lib/dt.jar$JAVA_HOME/lib/tools.jar
+export PATH=$PATH:$JAVA_HOME/bin
 ```
 
 环境变量修完执行`source /etc/profile`立即生效
