@@ -26,8 +26,6 @@ public class Receiver {
     public static void main(String[] args) throws Exception{
 
         // 1.获取连接工厂
-
-
         ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(
                 "admin",
                 "admin",
