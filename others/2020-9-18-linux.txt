@@ -1,0 +1,128 @@
+shutdown   关机   shutdown -h 19:00
+reboot     重启   也可以加参数 
+halt       立即关机
+
+文件系统:以根/为起点,树状结构
+存放在/bin
+/boot   启动linux的核心文件,比如启动文件,镜像文件
+/dev    
+/etc    所有系统管理的配置文件
+/home   用户的主目录
+/lib    存放系统的动态链接
+/lost+found  一般是空的,如果linux非法关机,这个里面有正在编辑的文件
+/opt   主机额外安装用的软件存放的位置
+/root  root用户的配置
+/tmp   临时文件,定时的会做一些清理
+/var   存放的是不断修改的文件,web文件,日志文件
+
+文件管理:白的是文件,蓝色的文件夹
+touch 文件名 创建文件
+rm 文件名    询问删除
+cp 文件1  文件2   复制文件1到文件2
+cp 文件1  /root/...   复制文件到路径下
+cp -r 文件夹1  文件夹2  复制文件夹1到文件夹2
+mv 文件1  /root   移动文件到路径下
+ 
+rm -f 文件名 不询问删除
+mkdir  文件夹名   创建文件夹
+rmdir 文件夹名 删除空文件
+rmdir -r 文件夹名  递归删除非空文件夹
+rm -rf 文件夹名   强制删除文件夹,不询问
+mkdir -m 711 文件夹名  创建文件夹并复制权限
+mkdir -p test1/test2/test3  创建所需目录的递归,这些文件都创建
+useradd 用户名  创建一个用户
+chmod  --help  查看帮助文档,修改用户的权限
+chown 用户名 文件名  修改文件的所属组
+chown  777   文件名  
+chown  644   文件名   默认权限
+chown u=rwx,g=rx,o=r 文件名
+chown +x 文件名 给三者都加上可执行权限
+pwd    查看当前的操作空间
+ls     查看当前目录下有什么
+ls -l   以长格式显示   -代表普通文件  代表文件夹
+         rwx  rwx  rwx   读 写 可执行
+         412  412  412   二进制表示法  777权限
+      第一组代表文件的拥有者root
+      第二个是文件的所属组
+      其他人的权限
+ll    ls -l的缩写
+ls -l -a    ls -la   ll -a  都是一样的,查看全部的文件,包括隐藏文件
+  
+目录:默认是755权限
+
+
+vim
+进入文件中 想插入,直接按o
+按a在后面写
+:x  也是保存并退出
+:wq! 保存并防止修改
+按下行数,再按下大写的T,可以跳转到对应的行
+按下G,最后一行
+按下g,第一行
+/sajfas  对sajfas进行查找  再按n,下一个  ,N上一个
+替换  :1,$s/www/aaa/g  从第一行到最后一行把www替换为aaa
+
+
+安装
+rpm安装  不会自己装依赖
+一般是用 yum安装  yellowdog update modify
+
+查找yum 源
+yum  list 
+yum update  更新
+
+useradd -c testtest() -d /home/sam -g wangzhen -G root -s /bin/bash 
+ -u 1100 wngzhen1010
+
+password wangzhen1010  修改密码
+su wanzghen1010  登录用户
+userdel -r wangzhen 删除用户
+usermod 修改用户
+
+
+groupadd
+用户切换组  newgrp组名
+
+df  列出磁盘整体的使用量
+df -T    显示系统文件类型
+df -Th  将单位进行转化
+df -a  列出所有的文件系统
+df -h /etc/  列出etc目录下的磁盘使用量
+
+du  列出所有的文件
+du -m 按照M为单位列出
+
+fdisk -l 查看当前磁盘
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
