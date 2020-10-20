@@ -1,0 +1,15 @@
+﻿2:
+  Alt+7   查看类的所有方法
+  Ctrl＋F12：显示当前文件的结构
+  Alt + Enter   引入类
+  Ctrl + O  查看我们继承的类或者接口中的方法，以及我们要实现的方法
+  Alt + Insert    set/get; 构造方法;  toString; 重写方法。。。 
+  Ctrl+Alt+T 将代码包在一个块中，例如try/catch  ;synchronized等
+  Shift+F6，重命名
+  ctrl+shift+F10 ,快速运行程序 
+  ctrl+P,方法参数提示
+  Ctrl+D ,复制当前行
+  Ctrl+Alt+U,查看某个类的完整关系类图
+  ctrl+x, 删除一行
+  Ctrl+Alt+L，格式化代码
+  Ctrl＋Alt＋V ：自动创建变量也就是=号前的变量定义

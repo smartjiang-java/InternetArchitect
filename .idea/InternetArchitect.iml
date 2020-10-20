@@ -5,8 +5,19 @@
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/16 一期 消息中间件/ActiveMQ/activemq01/src/main/java" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/16 一期 消息中间件/ActiveMQ/activemq01/src/main/resources" type="java-resource" />
+      <sourceFolder url="file://$MODULE_DIR$/00计算机底层知识/第一节/src/java" isTestSource="false" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="Java EE 6-Java EE 6" level="project" />
+    <orderEntry type="module-library" exported="">
+      <library>
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/../../../java软件/maven/repository/org/apache/activemq/activemq-all/5.15.11/activemq-all-5.15.11.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
   </component>
 </module>
