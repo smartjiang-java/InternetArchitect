@@ -1,7 +1,5 @@
 package com.jqk.cache;
 
-import sun.misc.Contended;
-
 /**
  * ClassName:com.jqk.cache.CacheLinePadding
  * Package:PACKAGE_NAME
@@ -15,7 +13,6 @@ import sun.misc.Contended;
 /**
  * 验证缓存行的存在
  */
-
 public class CacheLinePadding {
 
     public static volatile long[] arr = new long[2];
