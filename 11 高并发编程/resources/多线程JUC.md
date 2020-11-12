@@ -284,21 +284,82 @@ final boolean acquireQueued(final Node node, int arg) {
     lock.unlock();Synchronized是自动解锁的，但lock却不是手动解锁的，要在finally块中解锁。
     同时：可以传递参数为true，公平锁，按照等待顺序执行，会检查等待队列是否为空。 
     可以进行tryLock，synchronized拿不到锁会直接进入阻塞状态还可以lockinterupptibly（被打断）。
+    ①使用（可以一定程度上替代sync）：
+    Lock lock = new ReentrantLock();
+    申请的锁，在需要加锁的地方（syncronized的同样地方）lock.lock()；即为加锁，加锁结束以后要lock.unlock()解锁，
+    解锁代码一定写在finally块中，确保一定能解锁，sync是在自动解锁的大括号执行完自动解除。
+    ②lock.tryLock(time, TimeUnit)，time代表等待值，TimeUnit代表等待单位，返回值是一个boolean（是否拿到了锁），
+    尝试锁之后也一定要unlock()解锁（如果拿到了）。
+    若发现锁被征用，那就等待time时间，如果到时间锁解除了就继续自己的线程执行然后解锁，若没得到（上一个锁内的线程没执行完），  
+    则进行等待。（比sync好的一点是，sync的锁第二个线程来看到没释放就直接等待，这就是reentrant比sync好的地方）
+    ③lock.lockInterruptibly() 设置可以对interrupt()方法做出响应并加锁（此时就不需要lock.lock()了，这就加了锁，不过解锁一定需要），
+    可以响应别人的打断（sync中一旦wait了，只能让别人notify带能醒来，这也是reentrant比sync好的地方）
+    若使用了lock.lockInterruptibly()，可以使用interrupt()打断等待。
+    例：线程1lock.lock()加锁，中间代码为永远睡下去，最后解锁，线程2使用lock.lockInterruptibly()申请这种加锁方式
+    （若2也用的lock.lock()那就只能等下去，跟sync一样了），那么就可以在下面线程2.interrupt()，来打断自己的等待。
+    ④使用这种方法可以为公平锁（先来后到拿到锁）。(sync只有非公平锁)
+    ⑤reentrantLock底层是cas，synchronized底层sync
+    –背过！–（对生产者消费者多线程面试题的解答方案！）：
+    ⑥Condition producer = lock.newCondition() 这里的newCondition()相当于新增了一个等待队列，这个队列中的线程抢一把同步锁
+    ⑦producer.await() producer这个等待队列所属的线程阻塞
+    ⑧producer.singalAll() producer这个等待队列中的所有线程全部唤醒
 ### 5.3.2:CountDownLatch
 倒数的门栓：等着多少个线程结束才开始执行，latch.wait();  latch.countdown();
+①new countDownLatch(int)，int代表门栓的值，每个线程调用countDown()，然后await()阻塞等待拴住了，最后为0的时候，一起释放
+ ②latch.countDown() 当前门栓数量-1
+③latch.await() 阻塞等待  不一定几个阻塞，也不一定几个countDown()。
+注：latch.countDown()不会出现线程安全问题，因为锁在latch内部已经帮忙实现了，已经是原子性操作了。
+ 若int为100，这里的countDown()可能是一个线程一直在阻塞，其他,99个线程都没阻塞，最后等到过去了99个的countDown()，
+ 这里的countDown()也不一定是99个线程执行的，可能是第二个线程就循环99次countDown()了，改为0之后，这个线程才接触阻塞。
+ （不一定是几个在阻塞，不是所有都在阻塞）！
 ### 5.3.3：CycilcBarier
  栅栏，达到多少线程数才开始发车
+ ①定义方式：new CyclicBarrier(parties, new Runnable(){})，parties代表满几个人发车，
+ runnbale接口中是满了之后先干这个中的事再往下走
+ ②定义方式：new CyclicBarrier(parties)，满parties人，就会取消前面阻塞的状态，发车
+ ③barrier.await() 阻塞住
+ 滚动发车，车满就走。全部阻塞，满了开车。
+ 注：与3的区别就是，4是parties线程一起在等，而3不一定。
 ### 5.3.4：Phase
   按照不同的阶段对线程开始执行
+  ①继承自phaser类来声明，需要重写onAdvance(int phase, in registeredParties) 这个方法在所有线程都满足第N阶段就会自动调用，
+  这个方法不用调用，是自动的，phase代表阶段（0开始）,registeredParties目前阶段几个，返回值为boolean，若为false则整体没完事，
+  返回true代表整个流程结束。
+  ②phaser.arriveAndAwaitAdvance()，到达并等待着继续向前走
+  ③phaser.arriveAndDeregister()，调用这个方法的，就此结束，再有阶段也不往后走了
+  分段执行，多个线程可能有的只走到第一阶段，有的可能一直贯穿到最后阶段。（遗传算法中可能会使用，问的少）
 ### 5.3.5：ReadWriteLock
   读写锁，共享锁和排它锁。读锁，允许读，不    允许写；写锁，读写都不允许。
+  ①ReadWriteLock readWriteLock = new ReentrantReadWriteLock()；总声明
+  ②Lock lock = readWriteLock.readLock();读锁
+  ③Lock lock = readWriteLock.writeLock();写锁
+  ④lock.lock();
+  ⑤lock.unLock();
+  读锁只锁除了读之外的数据，比如说当前获得了读锁，又有一个线程来访问发现是读则直接放行，发现是写就不让进入
+  写锁只锁写，同理于读锁
+  若加ReentrantLock那就是所有的操作只能顺序执行，所以这就是读写锁的优势。
 ### 5.3.6：Semaphore
  信号量，限流，必须先获得许可，允许多少个线程同时进行，比如车道和收费站
+ ①new Semaphore(permits) 声明，permits允许的数量
+ new Semaphore(permits, boolean) 声明，boolean若为true就代表是公平的（后来的线程在后面拍着）
+ ②acquire() 取得，从semaphore取出来一个，上面会-1，若permits为0时则别人是再取不到的
+ ③release() 我用完了，返回灯，上面+1
+ 顺序：acquire() - 业务代码 - release()
+ 所以semaphore是允许最多同时几个线程运行。
+ 限流！
 ### 5.3.7：Exchanger
   交换数据，线程一执行exchange方法阻塞，将值T1保存；线程二执行exchange方法，将值T2保存，进入阻塞；T1与T2交换值，两个线程继续往下跑。
+  ①new exchanger<>()声明
+  ②exchange(object) 第一个线程调用的时候传入t1字符串，此线程阻塞，第二个线程调用的时候传入t2字符串，
+  此时exchange调换第一个线程的字符串是t2，第二个线程的字符串是t1，然后阻塞取消，继续执行。
 ### 5.3.8：LockSupport
   锁支持，LockSupport.park();是当前线程阻塞   LockSupport.unpark();解封，使线程继续运行，onpack可以现在pack之前调用，
   用来代替wait和notify，更灵活，可以唤醒特定的线程。底层是是unsafe的park方法。
+  ①LockSupport.park() 当前线程阻塞
+  ②LockSupport.unPark(Thread) Thread线程继续运行
+  注：unpark可以先在park之前调用，那么park就不会停止了，先行放行
+  优点：以前阻塞线程，wait之类的需要加在一种锁对象上才可以整个都停住，而LockSupport不需要；唤醒阻塞的线程以前需要notify，
+  而且不能针对某个指定的线程，因为都在一个队列中，而LockSupport可以。
   
   
   
@@ -365,17 +426,32 @@ Map等于空：初始化map**
     ## 1.2:队列的分类
  5. BlocKingQueue有以下几种:  
   ### A:  LinkedBlockingQueue
-  链表实现,等待队列长度最大为 Integer.Max_Value**  
+  链表实现,没有长度限制，可以一直加到内存满了（或者integer的MAX）。
+  在通用的接口上又加了两个方法：
+  .put() 往里装，如果满了线程会阻塞住
+  .take() 往外拿，如果空了线程会阻塞住
+  所以天生就实现了生产者消费者模型。
+ 
+  面试题：Queue和List区别到底在哪
+  答：Queue添加了对线程友好的API，offer peek poll，在BlockingQueue进一步新增了put、take方法，可以阻塞，天生实现了生产者消费者模型。
   ### B:ArrayBlockingQueue
   可以设置初始队列大小** 
   ### C:DelayQueue
   按照等待的时间排序，按时间进行任务调 度,本质上是PriorityQueue .实现类要实现Delay接口，传入等待时间，**隔多长时间运行** 
  ### D: PriorityQueue
  继承AbstractQueue,二叉树的模型，**对添加的元素排序，默认是升序**
+ 插入的元素会自动排序，从小到大，从a-z，内部实现是一个二叉树，堆排序中的最小堆或者说是小顶堆、小根堆
  ### E: SynchronizedQueue
  容量为0，不可以往里面扔东西add，前面等着拿东西的时候才可以装put,传递东西** 
+装不了东西，不是为了装东西的，是为了给另一个线程下达任务的。
+ 用途：两个线程之间互相交换数据，很类似前文说到的Exchanger，不过exchanger需要两个线程都阻塞等待完成交换，
+ 而synchronusQueue则不需要，线程池中线程之间的联系都用他。表面看没用。
 ### F:TransferQueue
 里面有transfer方法，装完东西，阻塞，等着东西被取走，才离开
+新增了.transfer(object) 放入队列
+与put不同为put是有一个线程装完数据就走了，而transfer则是装完阻塞等有人取走才离开干自己的事（可以比喻为装货之后等着拿钱才走）
+用途：提交一个订单进来，然后等着有人处理这个订单，才离开返回给客户一个反馈。（
+当然这过于底层了，一般都用MQ，如果真是自己写的java底层就可以用这个transferQueue）
  
 ## 8.2:Executor
 ### 8.2.1:Runnable接?和Callable接口
@@ -492,6 +568,88 @@ public ScheduledThreadPoolExecutor(int corePoolSize) {
 ### 9.4.3:面试题
 这一篇就写到这里,学习了多线程之后,来一个面试题目:假如提供了一个闹钟服务,订阅这个服务的人特别多,10亿人,该怎么优化?
 思路:把订阅任务分发到其他的边缘服务器上,在每一台服务器上用线程池+服务队列
+
+
+
+# 10-JMH（测试方法工具）简单介绍
+链接: http://openjdk.java.net/projects/code-tools/jmh/.
+JMH是基于注解的测试插件
+
+1. 测试准备步骤
+引入maven依赖
+IDEA安装 JMH plugin插件
+打开运行程序注解配置setting->Build,…-> compiler -> Annotation Processors -> Enable Annotation Processing
+定义一个类PS 处理计算
+写单元测试类PSTest（运行类） 【一定写在Test-java目录下才可以运行】
+直接run运行PSTest
+若出现如下异常（默认要往C盘写入测试报告，对于windows而言很私密目录不允许写）
+ERROR: org.openjdk.jmh.runner.RunnerException: ERROR: Exception while trying to acquire the JMH lock (C:\WINDOWS\/jmh.lock): C:\WINDOWS\jmh.lock (拒绝访问。), exiting. Use -Djmh.ignoreLock=true to forcefully continue.
+at org.openjdk.jmh.runner.Runner.run(Runner.java:216)
+at org.openjdk.jmh.Main.main(Main.java:71)
+
+点开Edit configurations->Environment variables点开->include system…勾上 （加载进入系统环境变量，系统环境变量中的TEMP目录中去写）
+重新运行成功
+
+2. 注解
+@Benchmark 启用JMH测试
+@Warmup(iterations = 1, time = 3) 预热，虚拟机先起来，调用iterations次方法，每调一次等待time秒钟，因为jvm对特定代码会优化所以预热很重要
+@Fork(nums) 起nums个线程去执行这个程序
+@BenchmarkMode(Mode.Throughput) 执行模式，左侧是吞吐量（每秒执行多少次）
+@Measurement(iterations = 1, time = 3) 整个测试重复iterations次，每调一次等待time秒
+
+二、Disruptor
+速度最快的MQ，性能极高，内部全是cas，单机（内存中的高效率队列，跟redis）
+
+1. 特点：无锁高并发，使用环形Buffer，直接覆盖（不清除）旧的数据，降低GC频率，实现了基于事件的生产者消费者模式（观察者模式）。
+对比ConcurrentLinkedQueue（链表实现），在遍历上来讲链表性能低于数组。
+JDK中没有ConcurrentArrayQueue（数组实现），因为数组的长度是固定的，每次增加长度实际上都是新建一个更长的数组然后将数据复制进来。
+
+2. RingBuffer结构：disruptor是利用数组实现的，而且是首尾相连的环形结构（RingBuffer），内部维护一个sequence（代表下一个有效元素的位置），就这一个指针然后旋转指向下一个位置，加了一圈之后再加就会覆盖原有
+
+![disruptor结构](image/disruptor结构.png)
+![计算下一个](image/计算下一个.png)
+
+总结：二进制的计算速度更快，而且转了一圈过后只会覆盖元素，所以没必要像链表一样维护头尾两个指针，只要维护一个就行了，综上所述ringBuffer的性能更强。
+这里的覆盖只是原理是这样，实际上在生产中生产满了，当下一个即将覆盖的时候，发现消费者还没取走第一个商品，则不继续生产覆盖第一个，执行等待策略（一共八种，最常见的为BlockingWait，阻塞等待），等什么时候消费者拿走了数据然后唤醒生产填补空位。
+这个sequence指针的实现源码有一段：
+
+![disruptor源码](image/disruptor源码.png)
+
+，前面声明7个long类型（8字节），后面声明7个long，保证cursor不管跟前面的对齐还是后面的对齐，一定是自己在一个缓存行内，所以效率十分高。
+
+3. 使用
+环形队列中的元素实际上是一个个Event对象的引用。
+在new出来这个disruptor之后，会提前分配内存空间。
+步骤：
+定义Event，环形队列中的元素（生产的产品）
+定义Event工厂，用于填充队列。
+定义EventHandler（消费者），处理容器中的元素
+
+4. 生产者线程模式：
+ProducerType生产者线程模式一共有2种：
+ProducerType有两种模式 Producer.MULTI和Producer.SINGLE
+默认是MULTI，表示在多线程模式下产生sequence
+如果确认是单线程生产者，那么可以指定SINGLE，效率会提升
+如果是多个生产者（多线程），但模式指定为SINGLE，会出什么问题呢？
+
+
+5. 等待策略
+①，(常用）BlockingWaitStrategy：通过线程阻塞的方式，等待生产者唤醒，被唤醒后，再循环检查依赖的sequence是否已经消费
+② BusySpinWaitStrategy：线程一直自旋等待，可能比较耗cpu
+③ LiteBlockingWaitStrategy：线程阻塞等待生产者唤醒，与BlockingWaitStrategy相比，区别在signalNeeded.getAndSet,如果两个线程同时访问一个访问waitfor,一个访问signalAll时，可以减少lock加锁次数
+④ LiteTimeoutBlockingWaitStrategy：与LiteBlockingWaitStrategy相比，设置了阻塞时间，超过时间后抛异常
+⑤ PhasedBackoffWaitStrategy：根据时间参数和传入的等待策略来决定使用哪种等待策略
+⑥ TimeoutBlockingWaitStrategy：相对于BlockingWaitStrategy来说，设置了等待时间，超过后抛异常
+⑦ （常用）YieldingWaitStrategy：尝试100次，然后Thread.yield()让出cpu
+⑧ （常用）SleepingWaitStrategy : sleep
+
+6. 多个消费者模式
+    LongEventHandler h1 = new LongEventHandler();
+    LongEventHandler h2 = new LongEventHandler();
+    disruptor.handleEventsWith(h1, h2...)//传入多个消费者（多线程）
+
+7. 出异常情况处理
+调用.handleExceptionsFor(h1).with()并重写以上三个方法，方法内处理。
 
    
 
