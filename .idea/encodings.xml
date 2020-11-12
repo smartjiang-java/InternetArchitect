@@ -1,7 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/00计算机底层知识/第二节/image/内碎片和外碎片.png" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/00计算机底层知识/第二节/image/操作系统功能.png" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/00计算机底层知识/第二节/image/操作系统指令.png" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/00计算机底层知识/第二节/image/磁盘寻址.png" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/00计算机底层知识/第二节/image/虚拟内存加载程序.png" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/01 Spring/04 spring，ioc入门与详解/01SpringHelloWorld/src/com/mashibing/spring/TestGetBean.java" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/11 高并发编程/resources/image/32位对象头.png" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/11 高并发编程/resources/image/64位对象头.png" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/11 高并发编程/resources/image/64位对象头.png" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/11 高并发编程/resources/image/锁升级过程.png" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/16 一期 消息中间件/RocketMQ/MQ01/src/main/java/com/mashibing/rocketmq/Consumer.java" charset="GBK" />
     <file url="file://$PROJECT_DIR$/others/git.txt" charset="GBK" />
     <file url="PROJECT" charset="GBK" />
