@@ -3,16 +3,28 @@
 ## 1.1：线程开启的三种方式
 a：T1  Extends Thread     重写run()方法          
        new T1().start();
-b:：T2  Implements Runnable     重写run()方法     
+b：T2  Implements Runnable     重写run()方法     
       new Thread(new T2()).start();      
-c：通过线程池来启动（严格来说也是上面的两种）
+c：通过线程池以及lanada表达式来启动（严格来说也是上面的两种）
 
 ## 1.2：线程的状态
-4：线程状态
-新创建  就绪  阻塞  挂起   
+ 
+![线程状态](image/线程状态.png)
+
+就绪和运行状态一起被叫做Runable状态
+加上同步代码块,没有得到锁,进入阻塞状态,获得锁,进入就绪状态
+在运行的时候,调用wait(),join(),进入等待状态,调用notify(),notifyAll()进入就绪状态
+在运行的时候,调用sleep(),进入TomeWaiting状态,到期以后进入ready状态等待分配时间片执行
+yield执行后线程进入就绪状态,但礼让不一定都能礼让成功(即让其他线程先执行)，而是由CPU决定
+从运行到就绪,被挂起
+stop()强制关闭,不建议使用
+如果一个线程长时间运行,可以用interrupt(),在sleep的时候catch异常
+getState():取得线程状态
 
 ## 1.3的一些方法
-5：join（）方法：线程join进来后，后面的方法就不能并发执行了
+sleep():沉睡,让出cpu,时间到了回到就绪状态
+yield():从就绪状态返回到等待队列,让出一下cpu
+join（）方法：t2.join()->让t2运行,一般都是等待某一个线程结束线程join进来后，后面的方法就不能并发执行了
 
  
  
