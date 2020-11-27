@@ -465,7 +465,7 @@ Map等于空：初始化map**
   面试题：Queue和List区别到底在哪
   答：Queue添加了对线程友好的API，offer peek poll，在BlockingQueue进一步新增了put、take方法，可以阻塞，天生实现了生产者消费者模型。
   ### B:ArrayBlockingQueue
-  可以设置初始队列大小** 
+  可以设置初始队列大小
   ### C:DelayQueue
   按照等待的时间排序，按时间进行任务调 度,本质上是PriorityQueue .实现类要实现Delay接口，传入等待时间，**隔多长时间运行** 
  ### D: PriorityQueue
@@ -515,6 +515,9 @@ ThreadPoolExecutor tpe = new ThreadPoolExecutor(2, 4,
 ```
 **七个参数:**
 **A:corePoolSize:核心线程数**，线程池中一开始存在的线程数,核心线程永远活着(可以通过参数控制是否关闭核心线程,默认不关闭)
+如果正在运行的线程少于corePoolSize线程，则执行程序总是喜欢添加新线程而不是排队。
+如果正在运行corePoolSize或更多线程，则执行程序总是更喜欢对请求进行排队，而不是添加新线程。
+如果无法将请求排队，则将创建一个新线程，除非该线程超过了maximumPoolSize，在这种情况下，该任务将被拒绝。
 **B:maximumPoolSize:最大线程数**
 **C:keepAliveTime:线程空闲的时间，超过这个时间，线程资源归还给操作系统**
 **D:TimeUnit:生存时间的单位**
@@ -584,7 +587,7 @@ public static ExecutorService newFixedThreadPool(int nThreads) {
 下面是源码:
 ```java
 public ScheduledThreadPoolExecutor(int corePoolSize) {
-////最大线程数为Integer.MAX_VALUE,可能会创建大量线程，从而导致OOM
+//最大线程数为Integer.MAX_VALUE,可能会创建大量线程，从而导致OOM
     super(corePoolSize, Integer.MAX_VALUE, 0, NANOSECONDS,
           new DelayedWorkQueue());
 }
@@ -599,7 +602,26 @@ public ScheduledThreadPoolExecutor(int corePoolSize) {
 这一篇就写到这里,学习了多线程之后,来一个面试题目:假如提供了一个闹钟服务,订阅这个服务的人特别多,10亿人,该怎么优化?
 思路:把订阅任务分发到其他的边缘服务器上,在每一台服务器上用线程池+服务队列
 
+## 9.5:常见的拒绝策略（四种）和使用场景
+A:new ThreadPoolExecutor.AbortPolicy()
+AbortPolicy 总是抛出异常,所有停止运行，无特殊使用场景，默认就是这个拒绝策略。对于一些比较重要的业务，可以使用该拒  绝策略，方便出错的时候即时发现错误原因
+B:new ThreadPoolExecutor.CallerRunsPolicy()
+CallerRunsPolicy  将任务丢给启动线程池的线程去执行。适用于不太重要的业务场景，不抛出错误，简单的反馈控制机制，将降低新任务的提交速度。
+C:new ThreadPoolExecutor.DiscardPolicy()
+DiscardPolicy  直接丢弃任务。将任务丢给线程池本身的线程去运行，一般在不允许失败的、对性能要求不高、并发量较小的场景下使用；不然的话，容易降低性能。
+D:new ThreadPoolExecutor.DiscardOldestPolicy()
+DiscardOldestPolicy    让最早进入阻塞队列的离开，然后自己进去排队。将最早进入阻塞队列的丢弃，典型的喜新厌旧，看你是不是对于老的任务需要。
 
+## 9.6：自定义拒绝策略
+```java
+//实现RejectedExecutionHandler接口,实现rejectedExecution（）方法
+    static class MyHandler implements RejectedExecutionHandler {
+        @Override
+        public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+       //拒绝策略写在这里
+        }
+    }
+```
 
 # 10-JMH（测试方法工具）简单介绍
 链接: http://openjdk.java.net/projects/code-tools/jmh/.
