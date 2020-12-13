@@ -7,7 +7,7 @@ b：T2  Implements Runnable     重写run()方法
       new Thread(new T2()).start();      
 c：通过线程池以及lanada表达式来启动（严格来说也是上面的两种）
 
-## 1.2：线程的状态
+## 1.2：线程的状态(0->1)
  
 ![线程状态](image/线程状态.png)
 
@@ -15,20 +15,42 @@ c：通过线程池以及lanada表达式来启动（严格来说也是上面的两种）
 加上同步代码块,没有得到锁,进入阻塞状态,获得锁,进入就绪状态
 在运行的时候,调用wait(),join(),进入等待状态,调用notify(),notifyAll()进入就绪状态
 在运行的时候,调用sleep(),进入TomeWaiting状态,到期以后进入ready状态等待分配时间片执行
-yield执行后线程进入就绪状态,但礼让不一定都能礼让成功(即让其他线程先执行)，而是由CPU决定
 从运行到就绪,被挂起
-stop()强制关闭,不建议使用
 如果一个线程长时间运行,可以用interrupt(),在sleep的时候catch异常
 getState():取得线程状态
 
 ## 1.3的一些方法
-sleep():沉睡,让出cpu,时间到了回到就绪状态
-yield():从就绪状态返回到等待队列,让出一下cpu
-join（）方法：t2.join()->让t2运行,一般都是等待某一个线程结束线程join进来后，后面的方法就不能并发执行了
+sleep():沉睡,让出cpu,时间到了回到就绪状态sleep的时候发生中断interruppt()，会抛出异常,不会遗失自己的监视器，不会释放锁.
+        The threaddoes not lose ownership of any monitors
+stop()强制关闭,不建议使用
+yield():让出一下cpu,yield执行后线程进入就绪状态,但礼让不一定都能礼让成功(即让其他线程先执行)，而是由CPU决定
+        如果没有等待的线程，那么这方法不让步。
+        如果直接运行同一个线程对象，也就是一个JVM进程内部调用，不起任何作用。
+        只能在当前代码执行的线程上下文内部使用才有效果，让步的会最后执行，处于就绪状态
+join（）方法：t2.join()->让t2运行,一般都是等待某一个线程结束线程join进来后，后面的方法就不能并发执行了 .
+             在新加入线程没有执行完成之前，当前线程无法执行。
+interrupt（）:中断一个线程
+suspend（）：挂起一个线程，主动操作，移动到swap分区，无法释放占有的锁，会导致后面需要获取锁线程阻塞。 
+resume（）：恢复一个挂起的线程
+object的wait（),notify(),notifyAll(),只能在synchronized修饰的方法内部，或者同步代码块内调用，当在内部 
+           调用将锁释放，并且阻塞，扔到等待池中放着。等待notify（）,或者notifyAll(),才会继续等待调度
+           如果调用wait（）方法的线程没有事先获取该对象的监视器锁，则调用wait（）方法时调用线程会抛出
+           IllegalMonitorStateException异常。如果当前线程已经获取了锁资源，调用wait方法之后会释放这个锁资源，
+           但是只会释放当前共享变量上的锁，如果当前线程还持有其他共享变量的锁，则这些锁是不会被释放的。
+           
+## 1.4:线程德一些知识
+   >让一个线程退出：
+   >1：system.exit(),()内传递整数值，当值<0是异常退出，当值>=0是正常运行时退出
+   >2：线程运行结束
+   >3:抛出一个异常 
 
- 
+   >把多个单个线程（具有相同属性）集中管理，叫做线程组--->设计模式之组合模式
+   >一个线程必须拥有一个组，线程的优先级以及是否为守护线程与父线程相同
+   >java每个线程中包含父线程德引用，在liunx中所有线程都是由线程fock出来的；有安全管理器
  
 #2-synchronized
+>简单的加锁机制：
+>每个锁都有一个请求计数器和一个占有他的线程，当请求计数器为0时，这个锁可以是unhled的
 ## 2.1:synchronized的原理
 JDK早期，synchronized 叫做重量级锁， 因为申请锁资源必须通过kernel, 系统调用
 
@@ -57,7 +79,8 @@ jdk1.5之后,jdk对synchronized进行了优化。
 
 ##2.4对象上锁的过程
 **       **
-new - 偏向锁 - 轻量级锁 （无锁, 自旋锁，自适应自旋）- 重量级锁
+new - 偏向锁(偏向锁，第一次进入记住身份，再次进入不需要验证身份了，遇到抢占锁会被挂起（挂起被送到swap分区）)
+- 轻量级锁 （无锁, 自旋锁，自适应自旋）- 重量级锁
 
 ![锁升级过程](image/锁升级过程.png)
 
@@ -442,7 +465,7 @@ Map等于空：初始化map**
   面试题：Queue和List区别到底在哪
   答：Queue添加了对线程友好的API，offer peek poll，在BlockingQueue进一步新增了put、take方法，可以阻塞，天生实现了生产者消费者模型。
   ### B:ArrayBlockingQueue
-  可以设置初始队列大小** 
+  可以设置初始队列大小
   ### C:DelayQueue
   按照等待的时间排序，按时间进行任务调 度,本质上是PriorityQueue .实现类要实现Delay接口，传入等待时间，**隔多长时间运行** 
  ### D: PriorityQueue
@@ -492,6 +515,9 @@ ThreadPoolExecutor tpe = new ThreadPoolExecutor(2, 4,
 ```
 **七个参数:**
 **A:corePoolSize:核心线程数**，线程池中一开始存在的线程数,核心线程永远活着(可以通过参数控制是否关闭核心线程,默认不关闭)
+如果正在运行的线程少于corePoolSize线程，则执行程序总是喜欢添加新线程而不是排队。
+如果正在运行corePoolSize或更多线程，则执行程序总是更喜欢对请求进行排队，而不是添加新线程。
+如果无法将请求排队，则将创建一个新线程，除非该线程超过了maximumPoolSize，在这种情况下，该任务将被拒绝。
 **B:maximumPoolSize:最大线程数**
 **C:keepAliveTime:线程空闲的时间，超过这个时间，线程资源归还给操作系统**
 **D:TimeUnit:生存时间的单位**
@@ -561,7 +587,7 @@ public static ExecutorService newFixedThreadPool(int nThreads) {
 下面是源码:
 ```java
 public ScheduledThreadPoolExecutor(int corePoolSize) {
-////最大线程数为Integer.MAX_VALUE,可能会创建大量线程，从而导致OOM
+//最大线程数为Integer.MAX_VALUE,可能会创建大量线程，从而导致OOM
     super(corePoolSize, Integer.MAX_VALUE, 0, NANOSECONDS,
           new DelayedWorkQueue());
 }
@@ -576,7 +602,26 @@ public ScheduledThreadPoolExecutor(int corePoolSize) {
 这一篇就写到这里,学习了多线程之后,来一个面试题目:假如提供了一个闹钟服务,订阅这个服务的人特别多,10亿人,该怎么优化?
 思路:把订阅任务分发到其他的边缘服务器上,在每一台服务器上用线程池+服务队列
 
+## 9.5:常见的拒绝策略（四种）和使用场景
+A:new ThreadPoolExecutor.AbortPolicy()
+AbortPolicy 总是抛出异常,所有停止运行，无特殊使用场景，默认就是这个拒绝策略。对于一些比较重要的业务，可以使用该拒  绝策略，方便出错的时候即时发现错误原因
+B:new ThreadPoolExecutor.CallerRunsPolicy()
+CallerRunsPolicy  将任务丢给启动线程池的线程去执行。适用于不太重要的业务场景，不抛出错误，简单的反馈控制机制，将降低新任务的提交速度。
+C:new ThreadPoolExecutor.DiscardPolicy()
+DiscardPolicy  直接丢弃任务。将任务丢给线程池本身的线程去运行，一般在不允许失败的、对性能要求不高、并发量较小的场景下使用；不然的话，容易降低性能。
+D:new ThreadPoolExecutor.DiscardOldestPolicy()
+DiscardOldestPolicy    让最早进入阻塞队列的离开，然后自己进去排队。将最早进入阻塞队列的丢弃，典型的喜新厌旧，看你是不是对于老的任务需要。
 
+## 9.6：自定义拒绝策略
+```java
+//实现RejectedExecutionHandler接口,实现rejectedExecution（）方法
+    static class MyHandler implements RejectedExecutionHandler {
+        @Override
+        public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+       //拒绝策略写在这里
+        }
+    }
+```
 
 # 10-JMH（测试方法工具）简单介绍
 链接: http://openjdk.java.net/projects/code-tools/jmh/.
