@@ -39,11 +39,6 @@ node01:
 		TCP 00:57  FIN_WAIT    192.168.150.1:51587 192.168.150.100:80 192.168.150.12:80
 		FIN_WAIT： 连接过，偷窥了所有的包
 		SYN_RECV： 基本上lvs都记录了，证明lvs没事，一定是后边网络层出问题
-	
-	
-	
-	
-
 
 
 keepalived实验：
@@ -58,7 +53,7 @@ node01,node04:
 	yum install keepalived ipvsadm -y
 	配置：
 		cd  /etc/keepalived/
-		cp keepalived.conf keepalived.conf.bak
+		cp keepalived.conf keepalived.conf.bak  做备份
 		vi keepalived.conf
 			node01:
 			vrrp：虚拟路由冗余协议！
@@ -73,30 +68,31 @@ node01,node04:
 						auth_pass 1111
 					}
 					virtual_ipaddress {
-						192.168.150.100/24 dev eth0 label  eth0:3
+						192.168.150.100/24 dev eth0 label  eth0:3   //与这个配置相同即可
 					}
 				}
-			virtual_server 192.168.150.100 80 {
+			virtual_server 192.168.150.100 80 {    //这里修改目标地址和IP
 				delay_loop 6
-				lb_algo rr
-				lb_kind DR
+				lb_algo rr          //轮询方式
+				lb_kind DR          //模型 NET/DR/隧道
 				nat_mask 255.255.255.0
-				persistence_timeout 0
+				persistence_timeout 0    //客户机二次请求时会回到已经创立连接的服务机上面，实验环节改为0，生产环节改为合适的
 				protocol TCP
 
-				real_server 192.168.150.12 80 {
+				real_server 192.168.150.12 80 {    //这里设置服务机地址
 					weight 1
-					HTTP_GET {
+					HTTP_GET {　　　　　　　　　　　　　//对后端的健康检查 SSL_GET 改为HTTP_GET
 						url {
 						  path /
-						  status_code 200
+						  status_code 200            //这两行是健康检查对的结果，这个url{}可以有多个
 						}
 						connect_timeout 3
 						nb_get_retry 3
 						delay_before_retry 3
 					}   
-				}       
-				real_server 192.168.150.13 80 {
+				}
+				//把光标定在一个位置，然后：.，￥-1y   然后走到合适的位置，按下t，复制完成
+				real_server 192.168.150.13 80 {　　　　 //这里设置服务机地址
 					weight 1
 					HTTP_GET {
 						url {
@@ -108,7 +104,22 @@ node01,node04:
 						delay_before_retry 3
 					}
 				}
+  // 在主机上做远程复制
 			scp  ./keepalived.conf  root@node04:`pwd`
+
+ //完成后，启动（主备都启动）
+ service keepalived start
+  //验证:观察配置是否起作用
+  ifconfig
+  //让主机断开，开启备机
+  ifconfig eth0  down  刷新浏览器，看客户端是否还是可以访问
+  //再让主机修复
+    ifconfig eth0 up   观察主机是否能抢回来，注意有些主备是不能抢回来的
+  //实验:让服务机挂掉一台
+  service httpd stop    刷新浏览器，观察情况
+   //让服务器重新启动
+   service httpd start   刷新浏览器，观察情况
+
 
 
 
