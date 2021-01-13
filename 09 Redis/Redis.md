@@ -26,16 +26,16 @@ JVM：一个线程德成本1MB，可以调小
 redis是原语的，redis里面默认是16个库，0-15，每个库之间是隔离的。默认进去0号库
 select 8：选择8号库
 
-五种基本类型：在不同的业务场景下，需要选择不同的技术选型  
+key是字符串，value有五种基本类型  help @
 #### string :字符串 ，数值，二进制位操作  
 字符串，数值：session，k v缓存，数值计算计算器,ks文件系统(小碎片文件，磁盘IO)，内存
 ##### 字符串操作：
-set k1 00xx nx  表示k1不存在就去设置，表创建
-set k2 hello xx  只有存在的时候才能去修改，表更新
+set k1 00xx nx  表示k1不存在就去设置，创建
+set k2 hello xx  只有存在的时候才能去修改，更新
 mset k3 a k4 b   创建多个字符串
 mget k3 k4
 append k1 'world'  k1后面添加
-getranfe k1  start end    取字符串的start到end  ，
+getrange k1  start end    取字符串的start到end  ，
  注意 ：[redis有正反向索引，末尾-1，倒数第二个-2.  第一个是0，第二个是1 ]
 setrange k1 start  jiangqikun  从start开始用后面的字符串开始替换，超过的长度自动替换
 strlen k1  获得k1的字节长度,一个字符是一个字节，中文是两到三个字节
@@ -80,19 +80,81 @@ bittop or orkey k1,k2    k1与k2按位或操作存放在orkey中
    统计这两日的活跃用户数：bitop or orkey 20200112 20200113
                        bitcount destkey 0  -1
 
-#### list:双向链表，key持有头结点和尾节点
-同向：栈,
-非同向：队列
-index():模拟数组
+#### value是list:双向链表，是有序的，放入的顺序，key持有头结点和尾节点
+同向：栈,lpush ,lpop
+非同向：队列,rpush,rpop
+模拟数组
+阻塞队列，单波订阅，FIFO(先进先出)
+lpush k1  a b c d e   向链表里面从左边开始存元素，头插法
+lpop  k1              弹出左边的第一个元素
+rpush k2  a b c d e   向链表里面从由边开始存元素，尾插法
+rpop  k2              弹出右边的第一个元素
+lrange k1 start end   从左开始弹出k1的start元素索引到end长度的所有元素
+lindex k1  temp       取出k1的temp索引处的元素
+lset  k1  temp  xxxx  将k1的temp索引处的元素代替成xxxx
+lrem  k3  count value  移除k3中的count个value，若count>0.做左边开始;count<0，从右边开始
+linsert k3 after value xx  在k3的value后面插入一个元素xx
+linsert k3 before value oo  在k3的value前面插入一个元素oo
+注意：如果存在两个value，则只在第一个前后操作，而不会涉及到第二个
+llen k3                统计k3中有多少个元素
+blpop  k4  timeout      阻塞等待pop
 ltrim 0，-2 ,删除区间之外的数据，优化redis内存量
-顺序概念：放入的顺序
-场景：评论列表，消息队列，替代java容器，让JVM无状态
+[场景：评论列表，消息队列，替代java容器，让JVM无状态]
 
-hash：hashMap,分治法
-场景：用户详情
+#### value是hash：hashMap,分治法，key是String
+set 张三：： name zahngsan         设置张三的name
+get 张三：： name                  取出张三的name
+keys 张三*                        取出与张三有关的信息
+问题来了：如果字段很多，这会很麻烦，使用hash比较简单
+hset 张三 name zhangsan           hash设置一个name
+hmeset 张三 age 18 address anhui  设置多个字段
+hget  张三 name                   取出张三的name
+hmget 张三  name age              取出张三的name ，age
+hkeys 张三                        取出张三的所有字段名称
+hvals 张三                        取出张三的字段对应的值信息
+hgetall 张三                      取出张三的字段及其对应的值信息
+hincebyfloat 张三 age 0.5         对张三的age的value增加0.5
+[场景：用户详情,商品详情,点赞]
 
-set:集合，无序，不重复，HashSet
-场景：随机事件，多实例，不推荐集合交并
+#### set:集合，取出无序，不重复（去重），HashSet
+sadd k1 a b c d e   添加数据
+smembers k1         详细查看k1的所有元素
+srem k1 ooxx  xxoo   移除k1里面的元素
+sinter k2 k3         返回k2，k3的交集
+sinterstore temp k2 k3   取 k2和k3的交集存储在temp中,减少数据IO
+sunion  k2,k3        返回k2,k3的并集
+sunionstore temmp k2 k3
+sdiff  k2  k3        返回的k2的差集（去掉交集）
+srandmember k1 5 -5 10 -10   为正数的时候,取出一个去重的结果集(不超过已有元素数量);负数，取出一个带重复的结果集，一定满足要的数量
+     [用于用户抽奖，可重复或者不重复;还可以解决家庭争斗 ]
+spop k1               会从k1的元素中随机的弹出一个
+[场景：随机事件(抽奖)，多实例，集合操作]
+
+#### zset:sorted set：数据被去重，且实时对元素进行排序，元素有正反向索引
+排序：既要给出元素，也要给出分值；分值都为1按照名称的字典顺序
+zadd k1 8 apple 2 banana 3 orange   存进去，按照分值排序，物理内存：左小内大
+zrange k1 start end                 取出k1中start到end的元素
+zrange k1 start end  withscores     取出k1中start到end的元素及其分值
+zrangebyscore  k1  mix max          取出k1中分值处于min到max分数之间的元素
+zrevange k1  start end              取出k1中start到end的元素，由高到低
+zscore k1 value                     取出k1中value的分值
+zrank k1 value                      取出k1中value的排名(索引)
+zincrby k1 2.5 value                将k1中value的分值增加2.5
+集合操作：
+zunionstore  unkey  2 k1 k2         对多个集合做并集
+zunionstore  unkey  3 k1 k2 k3
+zunionstore  unkey1  2 k1 k2  weight 1 0.5       对多个集合做并集,并加上权重
+zunionstore  unkey2  2 k1 k2   aggregate max     对多个集合做并集,分数默认求和，这里可以是最大值
+[面试题目：排序是怎么实现的?增删改查的速度？   ==底层实现 skip list跳跃表，链表分层，随机的分层]
+[应用场景：歌曲排行榜]
+
+### 2:redis的进阶使用
+管道：将很多命令打包发送，命令之间使用\n隔开，使得通信的成本变低
+#### redis的消息订阅
+subscribe  00xx        订阅消息
+publish ooxx hello      消费端监听以后，每次推送给xxoo的消息才可以被看到
+注意：可以将日期和时间作为分值，消息作为value进行存储
+
 
 
 
