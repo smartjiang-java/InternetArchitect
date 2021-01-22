@@ -1,5 +1,5 @@
 
-## Redis
+## Redis：最大的特点就是快
 ### 1：什么是Redis?
 Redis是基于内存的，速度比较快，基于键值对（K，V）的，工作线程worker是单线程的，IO操作是多线程的，连接很多，连接池比较大,epoll(NIO)。
 k,v有五种类型，有本地方法，可以很好的实现计算向数据移动，IO优化。
@@ -152,8 +152,78 @@ zunionstore  unkey2  2 k1 k2   aggregate max     对多个集合做并集,分数默认求和，
 管道：将很多命令打包发送，命令之间使用\n隔开，使得通信的成本变低
 #### redis的消息订阅
 subscribe  00xx        订阅消息
-publish ooxx hello      消费端监听以后，每次推送给xxoo的消息才可以被看到
+publish ooxx hello     消费端监听以后，每次推送给xxoo的消息才可以被看到
 注意：可以将日期和时间作为分值，消息作为value进行存储
+
+#### redis事务：并不是那么完整，一切都是奔着快去的，没有回滚操作
+help @transactions
+注意：redis是单线程的,那个客户端的exec先到达的先执行
+multi   开启事务 
+...
+exec    执行事务
+
+watch 监控，类似于cas,监控初始值
+set k1 2
+watch k1
+multi
+...     如果其他事务修改了k1的值
+exec    k1的值与watch时不同，不会执行
+
+[redis的布隆过滤器]：解决缓存穿透问题：用小的空间解决大量匹配：概率解决问题99%
+缓存中没有，直接去数据库访问，其实数据库中也没有 将bitmap和bloom.so放在redis中，使得clienr端比较轻
+1：将已有的向bitmap中标记  
+2：请求的可能呗误标记
+3：一定概率会大量减少放行穿透，成本低
+bf.add   k1  aaa
+bf.exists k1   aaa
+如何使用过滤器：
+1:访问redis.io，点击上方Modules
+2：点击RedisBloom的小房子，来到github代码地址，右键复制下载连接https://githubcom/RedisBloom//archive/master.zip
+3：linux中wget https://github.com/RedisBloom/RedisBloom/archive/master.zip
+4: 如果安装了unzip，unzip *.zip ;没安装的话yum install unzip，再去解压
+5：进入到解压的文件夹，make
+6:cp bloom.so  /usr/local/redis.6.0.9/
+7:cd bin 
+8：redis-server --loadmodule /usr/local/redis.6.0.9/resisbloom.so 
+9:redis-cli 
+10:bf.add  k1 aaa      cf.add k2 bbb
+11:bf.exits k1 aaa     cf.exits k2 bbb
+
+1：查询穿透了，数据库中卻不存在，客户端增加redis中的key，value标记不存在，下次再查询，就不走布隆了，直接返回不存在
+2：数据库脱离redis， 如果数据库中增加了元素，需要增加元素对布隆的增加
+
+[redis作为缓存和数据库的区别]
+缓存数据其实不重要,不是全量数据;缓存应该随着访问变化(热数据)
+redis做缓存，减少后端数据库访问压力，那么redis里的数据怎么能随着业务变化，只保留热数据，因为内存大小是有限的，也就是瓶颈
+引出：
+1：key的有效期
+ a:由业务逻辑来推动，比如以天为单位把数据写入数据库， 
+    设置过期时间 1,2倒计时，3定时
+    1:  set k1 aaa ex 20 :说明这个数据20s后过期
+        ttl k1           :查找这个key还有多长时间过期
+    2:  set k2  bbb
+        expire k1 50      :设置50s后过期
+        set k2  ccc
+    3:  expireat          定时清除
+     [重新访问后过期时间是不会延长的，时间到了就访问不到这个数据了;如果发生了写，会剔除过期时间]
+    http://redis.cn/commands/expire.html
+    过期判定原理：1:被动访问判定    2：周期轮询时间判定(增量)
+        目的：稍微牺牲下内存，但是保住了redis性能为王
+ b:业务运转产生，因为内存是有限的，随着访问的变化，就淘汰冷数据
+    redis内存多大呢？  maxmemory参数配置最大内存(一般1-10G),内存使用将尽，有回收策略，一般多使用allkeys-lru：加入键的时候，如果过限，
+            首先通过LRU算法驱逐最久没有使用的键;和volatile-lru：加入键的时候如果过限，首先从设置了过期时间的键集合中驱逐最久没有使用的键.
+            一般看缓存中数据设置过期时间的占比，大量数据设置了过期时间选择后者，反之选择前者。
+
+缓存的击穿
+
+缓存的雪崩
+
+缓存的穿透
+
+缓存的一致性(双写）
+
+
+
 
 
 

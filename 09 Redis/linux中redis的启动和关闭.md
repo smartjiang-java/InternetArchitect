@@ -18,3 +18,11 @@
 3.  spring.io中:   https://spring.io/projects/spring-data-redis
 ```
 
+
+redis的启动：进入到bin中  ./redis-server  /usr/local/redis-6.0.9/etc/redis.conf
+ps aux|grep redis
+./ redis-cli
+输入密码：auth "123456"
+关闭： ps aux|grep redis
+kill id号    例如：kill 83850
+ps aux|grep redis
