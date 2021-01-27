@@ -262,8 +262,53 @@ redis做缓存，减少后端数据库访问压力，那么redis里的数据怎么能随着业务变化，只保留
    redis哨兵是如何知道其他哨兵的？
        redis自带发布订阅：在监控主的时候检测到从，并开启主的消息订阅发现其他哨兵，哨兵是会修改自己的配置文件的
 
+2^32:一致性哈希算法将整个哈希值空间映射成一个虚拟的圆环，整个哈希空间的取值范围为0~232-1。整个空间按顺时针方向组织。
+0~2^32-1在零点中方向重合。
 虚拟节点解决数据倾斜的问题：两个redis对应两个物理界点,可能出现数据集体往一个redis中存的情况.所以可以将redis的ip+一个数字十次
                         并hash,这个换上有二十个节点,每十个对应一个redis,可以减少redis倾斜的概率.
+
+集群代理：tw,predixy(性能最好),cluster,codis(豌豆荚团队，对redis源码进行过修改)
+
+客户端拆分有弊端：3个模式不能做数据库使用.
+
+预分区:
+   1:哈希法:一开始把魔术值设置的较大,比如10个,取模是10,模数值得范围是:0,1..9,中间加一层mapping，
+           0,1,2,3,4给第一个redis,5,6,7,8,9给第二个redis;如果有新的redis,那么让前两个redis让出一些槽位即可。
+           只需要迁移部分数据即可，比如3,4,8,9给第三台redis.
+   2:redis是怎么做的？(无主模型)
+     客户端get k1,随机连接一台redis,先hash%n,得到槽位，如果当前redis的槽位中有，取数据；否则，因为每个redis都知道其他
+     redis的槽位，返回客户端，应该去那个redis,进行重定向，重复上述操作。
+
+数据分治带来的问题：聚合操作，事务很难实现，可能所需要的key不在同一个redis上。  
+  方案： hash tag
+       把几个key使用相同的字符串进行hash，就可以把这几个key弄到一个redis上
+
+实际操作：
+github上搜索twemproxy  
+常识：来自yum装的软件来自于仓库，可能版本较低
+1:Linux系统，新建文件夹，git clone ... ,如果失败  yum update nss,升级下版本，中间选y
+2:yum install automoke  libtool  :安装automoke和libtool
+3：autoreconf -fvi    如果报错，autoreconf版本太低，需要到https://developer.aliyun.com/mirror找到epel
+   复制 wget -O /etc/yum.repos.d/epel.repo http://mirrors.aliyun.com/repo/epel-6.repo
+   linux 中 cd /etc/yum.repo.d/  然后粘贴执行上面那句话，然后就多了一个指向阿里仓库的位置，然后 yum clean all，清缓存。
+   再回到原本的文件夹  cd /usr/local/twemproxy/twemproxy ,执行 yum search antoconf,找到高版本，yum install autoconf版本号，
+   执行完成后 autoreconf版本号  -fvi
+4：./configure --enable-debug=full
+5： make
+6:  cd scripts，然后 cp nutcracker.init  /etc/init.d/twemproxy
+7:  cd /etc/init.d/    ,然后chmod +x twemproxy   
+8:  vi twemproxy 打开文件，然后linux重新打开一个页面，按照文件的指示去操作。 ,新打开页面，mkdir /etc/nutcracker
+9:  cd /usr/local/twemproxy/twemproxy/conf,然后执行cp ./*  /etc/nutcracker/
+10： cd /usr/local/twemproxy/twemproxy/src ,然后 cp nutcracker  /usr/bin ,在操作系统的任何位置都可以使用命令
+11： cd /etc/nutcracker/ ，然后nutcracker]# cp nutcracker.yml  nutcracker.yml .bak，将文件拷贝一下
+12： vi nutcracker.yml,  参考https://github.com/twitter/twemproxy   这个网站下的东西进行配置
+
+
+
+
+
+
+
 
 
 
@@ -274,7 +319,7 @@ redis做缓存，减少后端数据库访问压力，那么redis里的数据怎么能随着业务变化，只保留
 
 缓存的穿透
 
-缓存的一致性(双写）
+缓存的一致性(双写)
 
 
 
