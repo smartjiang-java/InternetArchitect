@@ -256,7 +256,7 @@ redis做缓存，减少后端数据库访问压力，那么redis里的数据怎么能随着业务变化，只保留
    2个： 一部分OK，另外一部分不算数，不存在分歧了
 
    主从复制：在主上，可以知道有多少个从来追随它， 需要人工去维护，因此引出了高可用HA，Redis的Sentinel
-         redis-server  ./6379.conf  --replicof  127.0.0.1 6380     6380跟随6379
+         redis-server  ./6379.conf  --replicaof  127.0.0.1 6380     6380跟随6379
          redis-server  ./16379.conf  --sentinel                    启动哨兵机制
        主知道有那些从，哨兵只要监控了主，就可以知道有哪些从.发布订阅
    redis哨兵是如何知道其他哨兵的？
@@ -302,25 +302,55 @@ github上搜索twemproxy
 10： cd /usr/local/twemproxy/twemproxy/src ,然后 cp nutcracker  /usr/bin ,在操作系统的任何位置都可以使用命令
 11： cd /etc/nutcracker/ ，然后nutcracker]# cp nutcracker.yml  nutcracker.yml .bak，将文件拷贝一下
 12： vi nutcracker.yml,  参考https://github.com/twitter/twemproxy   这个网站下的东西进行配置
+13:  然后分别启动service下的redis服务器，redis-server --port 6379  并启动tw代理： service twemproxy  start
+14:  新开窗口，进入到代理端口   redis-cli  -p  22121(自己配置的)
+15：  然后去set ,get等等操作，数据会根据算法存储在redis中，但是对客户端透明,客户端连接的是代理服务器
+弊端：
+数据分治，代理层keys * 不支持  ，watcht k1不支持，MULTI事务不支持
+
+github上搜索predixy
+1：不要尝试编译，我们一般是centos，而它需要需要支持C++11的编译器，因此我们需要编译完成的。
+   在Release中寻找https://github.com/joyieldInc/predixy/releases，右键复制链接地址.也可以下载完成后上传到linux.
+2：进入到linux系统中，wget 链接地址进行下载,下载完成后进行解压tar xf predixy-1.0.5-bin-amd64-linux.tar.gz
+3: cd conf    vi predixy.conf ：查看配置文件并进行修改,二个模式只能出现一种
+4： vi sentinel.conf    配置哨兵 光标定位到某个位置，shift+：，然后输入.,$y,代表复制光标到最后的，来到最后，np复制
+    来到光标位置，shift+：,然后输入.,$s/#//,代表从光标到最后把#代替换成空
+5： 来到每个哨兵中，比如26379中进行配置，三个哨兵配置文件除了端口号不一样，监控的都一样
+6： 启动哨兵：redis-server  26379.conf  --sentinel    ,三个都差不多
+7： 启动主  cd /test   makdir 36379   cd 36379   redis-server --port 36379   注意：新建文件touch 36379.conf
+8： 启动从  cd /test   makdir 36380   cd 36380   redis-server --port 36380 --replicaof  127.0.0.1 36379（主地址和端口）
+9： 上面的是一套主从，另外的主从类似，注意端口和地址
+10：新建一个Linux系统. cd /usr/local/predixy/predixy-1.0.5/bin,启动predixy： ./predixy  ../conf/predixy.conf
+    默认启动端口号7617
+11：新打开一个linux页面。启动客户端: redis-cli -p 7617
+12: set k1 aaa  ,set k2 aaa,  set {oo} k3 ccc   set {oo} k4 ddd 也可以get到，相同标识的可以放到一台机器中
+13： 新打开一个linux系统中，redis-cli -p 36379 ,然后keys * ,去查看数据如何落的。
+弊端：这里开启了两个主，不支持事务，一个主才支持事务。关闭了主，哨兵会让备变成主，这有一个过程，不是那么快。
+
+redis自身的集群：每个主机认领一些槽位  槽位代表的就是数据
+1：/usr/local/redis-6.0.9/utils/create-cluster ,然后vi create-cluster，查看修改配置文件，修改节点数和redis-server路径
+2：然后./create-cluster start，把全部节点品跑起来
+3：分主备 ./create-cluster create,需要输入yes
+4: 如果启动的是普通客户端 redis-cli -p 30001,set k1 SAFa,经过hash后，计算这个key存储的槽位不在这个redis上;所以一般这样启动：
+   redis-cli -c -p 30001,set k的时候如果key的槽不在当前redis上，回先跳转到应该存储的redis,然后再去存储
+   注意：set {oo}k2 ssss   set{oo} k3 dfs,会放进同一个redis,那么对这个key，是支持事务和watch的。
+5:关闭  ./create-cluster stop     ./create-cluster clean
+6:重点：手动启动   
+  ./create-cluster start
+   redis-cli --cluster create 127.0.0.1:30001  127.0.0.1:30002  127.0.0.1:30003  127.0.0.1:30004 
+      127.0.0.1:30005  127.0.0.1:30006  --cluster-replicas  1       
+   注意：地址+端口号 ，后面跟上副本数量，中间需要输入yes      redis-cli --cluster help 可以查看命令
+   redis-cli --cluster reshard 127.0.0.1:30001  :给新结点分配槽位
+   redis-cli --cluster info 127.0.0.1:30001     ：查看具体的主节点及其槽位信息，会出来全部的
+   redis-cli --cluster check 127.0.0.1:30001    ：查看全部的槽位分配范围。
 
 
-
-
-
-
-
-
-
-
-
-缓存的击穿
-
-缓存的雪崩
-
-缓存的穿透
-
-缓存的一致性(双写)
-
+面试常问：
+1：击穿
+2：穿透
+3：雪崩
+4：分布式锁
+5：API
 
 
 
