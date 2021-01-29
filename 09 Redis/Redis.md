@@ -152,7 +152,7 @@ zunionstore  unkey2  2 k1 k2   aggregate max     对多个集合做并集,分数默认求和，
 管道：将很多命令打包发送，命令之间使用\n隔开，使得通信的成本变低
 #### redis的消息订阅
 subscribe  00xx        订阅消息
-publish ooxx hello     消费端监听以后，每次推送给xxoo的消息才可以被看到
+publish ooxx hello     消费端监听以后，每次推送给xxoo的消息才可以被看到,先要订阅
 注意：可以将日期和时间作为分值，消息作为value进行存储
 
 #### redis事务：并不是那么完整，一切都是奔着快去的，没有回滚操作
@@ -392,6 +392,15 @@ redis使用的是epoll,jedis准备连接池化。
 2:选择高阶api还是使用低阶的api去使用它
 3：数据经过怎样的加工，序列化能存放进去
 
+在linux的redis的客户端，查看redis的所有配置：config get *
+注意限制远程连接的：config get protected-mode
+如果是yes  ，需要改成no  
+config set protected-mode no
+
+注意：1:通过简单的程序，通过IDEA连接redis，存进去一个<hello,china>
+       观察linux中redis中的 keys * ，会发现存进去的是乱码
+     2:使用string,如果出现了其他类型，会出现类型不匹配
+===》自定义序列化
 
 
 
